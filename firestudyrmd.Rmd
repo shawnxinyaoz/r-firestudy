@@ -1,0 +1,138 @@
+---
+title: "firestudy"
+author: "Xinyao Zhang"
+date: "7/23/2020"
+output: pdf_document
+---
+
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+
+d0 = read.csv("StudyArea.csv", header = TRUE)
+d00 = select(d0, 
+             ORGANIZATION = ORGANIZATI, 
+             CAUSE, 
+             YEAR = YEAR_, 
+             STARTDATE = STARTDATED, 
+             STATE, 
+             ACRES = TOTALACRES) # alreay no na?
+d = na.omit(filter(d00, ACRES > 1000)) #remove nas
+sum(is.na(d)) #check na
+```
+
+```{r}
+# 1
+d %>% group_by(YEAR) %>% tally() %>% ggplot(aes(x=YEAR, y=n)) + geom_smooth(method='lm') + geom_point()
+
+
+# The overall number of wildfires has increased in the past few decades.
+
+
+```
+```{r}
+# 2
+d1 = group_by(d, YEAR, STATE)
+d1 = select(summarise(d1, n()), YEAR, STATE, NUMBER_OF_FIRES = 'n()')
+d1
+ggplot(d1,aes(x=YEAR, y = NUMBER_OF_FIRES)) +
+  geom_point(size = 0.7) +
+  geom_smooth(method='lm') +
+  facet_wrap(~STATE, nrow =)
+
+
+# Arizona and Washington have the fastest increasing.
+
+
+```
+```{r}
+# 3
+d2 = summarise(group_by(d, YEAR), TOTALACRES=sum(ACRES))
+d2
+ggplot(d2, aes(x=YEAR, y=TOTALACRES)) +
+  geom_point() +
+  geom_smooth(method = 'lm')
+
+
+# The overall acreage burned has increased over the past years.
+
+
+```
+```{r}
+# 4
+d3 = summarize(group_by(d,STATE,YEAR), TOTALACRES=sum(ACRES))
+d3
+ggplot(d3,aes(x=YEAR,y=log(TOTALACRES))) +
+  geom_point(size=0.7) +
+  geom_smooth(method = 'lm') +
+  facet_wrap(~STATE, nrow = )
+
+
+# Arizona and Washington total acres have increased the most.
+
+
+```
+```{r}
+# 5
+d4 = group_by(filter(d, CAUSE %in% c('Human','Natural')), CAUSE, YEAR)
+d5 = summarise(d4,TOTALACRES=sum(ACRES))
+d5
+ggplot(d5, aes(x=YEAR, y=log(TOTALACRES),color=CAUSE)) +
+  geom_point(size = 0.7) +
+  geom_smooth() 
+
+
+# Natural cause has more total acres burned. While human cause has a steadier growth.
+
+
+```
+```{r}
+# 6
+ggplot (d, aes(x=STATE, y=log(ACRES)), las = 2) +
+  geom_violin() +
+  geom_boxplot(width=0.1) +
+  theme(axis.text.x = element_text(angle=45,vjust=0.7))
+
+# Colorado fires have usually lower acres.
+
+```
+```{r}
+# 7
+d6 = group_by(d, ORGANIZATION)
+d7 = summarise(d6, AVEFIRESIZE=mean(ACRES))
+d7
+ggplot(d7,aes(x=ORGANIZATION, y=AVEFIRESIZE)) +
+  geom_bar(stat = 'identity')
+
+
+# FS has got the largest and BIA has got the smallest average wildfire size.
+
+
+```
+```{r}
+# 8
+d8 = as.Date(d$STARTDATE, format='%m/%d/%y')
+d$DOY = strftime(d8, format = "%j")
+d9 = na.omit(d)
+d10 = select(group_by(d9, YEAR), YEAR, DOY)
+d11 = summarize(d10, START=as.numeric(min(DOY)), END=as.numeric(max(DOY)))
+d11$SEASON = d11$END-d11$START
+d11
+ggplot(d11,aes(x=YEAR)) +
+  geom_point(aes(y=START), color='darkred') +
+  geom_line(aes(y=START), color='darkred') +
+  geom_smooth(aes(y=START, color='red'),method='lm') +
+  geom_point(aes(y=END), color='darkblue') +
+  geom_line(aes(y=END), color='darkblue') +
+  geom_smooth(aes(y=END, color='blue'), method='lm') +
+  labs(y="START/END DAY") +
+  scale_colour_manual(name = '', values =c('blue'='blue','red'='red'), labels = c('END DATE','START DATE'))
+
+
+# The length of fire seasons increased in the last few decades since the gap between the smoothing lines indeed increased.
+
+
+```
+
